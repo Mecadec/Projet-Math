@@ -10,8 +10,9 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from scipy.spatial.distance import pdist, squareform
 from sklearn.cluster import AgglomerativeClustering, KMeans, DBSCAN
-from sklearn.metrics import silhouette_score, davies_bouldin_score, adjusted_rand_score
+from sklearn.metrics import silhouette_score, davies_bouldin_score, adjusted_rand_score, pairwise_distances
 from sklearn.model_selection import train_test_split
+from mpl_toolkits.mplot3d import Axes3D
 
 # 1. Charger les données
 df = pd.read_excel("Data_PE_2025-CSI3_CIR3.xlsx")
@@ -28,9 +29,12 @@ X_scaled = scaler.fit_transform(df_num)
 # Création d’un dossier pour sauvegarder les figures
 os.makedirs("figures", exist_ok=True)
 
-# 3. ACP (PCA) - réduction en 2D
-pca = PCA(n_components=2)
-X_pca = pca.fit_transform(X_scaled)
+# 3. ACP (PCA) - réduction en 2D et 3D
+pca_2d = PCA(n_components=2)
+X_pca = pca_2d.fit_transform(X_scaled)
+
+pca_3d = PCA(n_components=3)
+X_pca_3d = pca_3d.fit_transform(X_scaled)
 
 plt.figure(figsize=(8, 6))
 plt.scatter(X_pca[:, 0], X_pca[:, 1], c='blue', s=50, alpha=0.7)
@@ -41,15 +45,40 @@ plt.grid(True)
 plt.savefig("figures/Projection_PCA.png")
 plt.close()
 
-# 4. t-SNE - visualisation en 2D
-tsne = TSNE(n_components=2, perplexity=10, max_iter=1000, random_state=42)
-X_tsne = tsne.fit_transform(X_scaled)
+explained_variance_ratio = pca_2d.explained_variance_ratio_
+cumulative_variance = np.cumsum(explained_variance_ratio)
+
+print(f"Variance expliquée par PC1 : {explained_variance_ratio[0]:.3%}")
+print(f"Variance expliquée par PC2 : {explained_variance_ratio[1]:.3%}")
+print(f"Variance cumulée sur 2 composantes : {cumulative_variance[1]:.3%}")
+
+print(f"Variance expliquée par PC1 : {pca_3d.explained_variance_ratio_[0]*100:.3f}%")
+print(f"Variance expliquée par PC2 : {pca_3d.explained_variance_ratio_[1]*100:.3f}%")
+print(f"Variance expliquée par PC3 : {pca_3d.explained_variance_ratio_[2]*100:.3f}%")
+print(f"Variance cumulée sur 3 composantes : {np.sum(pca_3d.explained_variance_ratio_)*100:.3f}%")
+
+# 4. t-SNE - visualisation en 2D et 3D
+tsne_2d = TSNE(n_components=2, perplexity=10, max_iter=1000, random_state=42)
+X_tsne = tsne_2d.fit_transform(X_scaled)
 
 plt.figure(figsize=(8, 6))
 plt.scatter(X_tsne[:, 0], X_tsne[:, 1], c='green', s=50, alpha=0.7)
 plt.title("Projection t-SNE (2D)")
 plt.grid(True)
 plt.savefig("figures/Projection_tSNE.png")
+plt.close()
+
+tsne_3d = TSNE(n_components=3, perplexity=10, max_iter=1000, random_state=42)
+X_tsne_3d = tsne_3d.fit_transform(X_scaled)
+
+fig = plt.figure(figsize=(10, 8))
+ax = fig.add_subplot(111, projection='3d')
+ax.scatter(X_tsne_3d[:, 0], X_tsne_3d[:, 1], X_tsne_3d[:, 2], c='green', s=50, alpha=0.7)
+ax.set_title("Projection t-SNE - 3D")
+ax.set_xlabel("t-SNE 1")
+ax.set_ylabel("t-SNE 2")
+ax.set_zlabel("t-SNE 3")
+plt.savefig("figures/Projection_tSNE_3D.png")
 plt.close()
 
 # 5. Heatmap des distances
@@ -61,130 +90,24 @@ plt.title("Heatmap des distances entre observations")
 plt.savefig("figures/Heatmap_Distances.png")
 plt.close()
 
-# ----------------------
-# 6. Clustering et indices d’évaluation
-# ----------------------
+# 6. 3D PCA (visualisation)
+fig = plt.figure(figsize=(10, 8))
+ax = fig.add_subplot(111, projection='3d')
+ax.scatter(X_pca_3d[:, 0], X_pca_3d[:, 1], X_pca_3d[:, 2], c='blue', s=50, alpha=0.7)
+ax.set_title("Projection ACP (PCA) - 3D")
+ax.set_xlabel("PC 1")
+ax.set_ylabel("PC 2")
+ax.set_zlabel("PC 3")
+plt.savefig("figures/Projection_PCA_3D.png")
+plt.close()
 
-# Méthode 1 : CAH (Clustering Hiérarchique Ascendant)
-n_clusters = 3  # à adapter
-cah = AgglomerativeClustering(n_clusters=n_clusters, linkage='ward')
-labels_cah = cah.fit_predict(X_scaled)
+# --- Fonctions clustering et évaluation ---
 
-# Méthode 2 : K-means
-kmeans = KMeans(n_clusters=n_clusters, random_state=42)
-labels_kmeans = kmeans.fit_predict(X_scaled)
-
-# Méthode 3 : DBSCAN (exemple)
-dbscan = DBSCAN(eps=0.5, min_samples=5)
-labels_dbscan = dbscan.fit_predict(X_scaled)
-
-# Indices d’évaluation pour CAH
-silhouette_cah = silhouette_score(X_scaled, labels_cah)
-# Dunn index n’est pas dans sklearn, on peut approximer avec Davies-Bouldin (inverse)
-db_index_cah = davies_bouldin_score(X_scaled, labels_cah)
-
-print(f"CAH - Silhouette Score: {silhouette_cah:.3f}")
-print(f"CAH - Davies-Bouldin Index (plus bas meilleur): {db_index_cah:.3f}")
-
-# Indices pour K-means
-silhouette_kmeans = silhouette_score(X_scaled, labels_kmeans)
-db_index_kmeans = davies_bouldin_score(X_scaled, labels_kmeans)
-
-print(f"K-means - Silhouette Score: {silhouette_kmeans:.3f}")
-print(f"K-means - Davies-Bouldin Index: {db_index_kmeans:.3f}")
-
-# Indices pour DBSCAN (si au moins 2 clusters)
-if len(set(labels_dbscan)) > 1 and -1 not in set(labels_dbscan):
-    silhouette_dbscan = silhouette_score(X_scaled, labels_dbscan)
-    db_index_dbscan = davies_bouldin_score(X_scaled, labels_dbscan)
-    print(f"DBSCAN - Silhouette Score: {silhouette_dbscan:.3f}")
-    print(f"DBSCAN - Davies-Bouldin Index: {db_index_dbscan:.3f}")
-else:
-    print("DBSCAN - Pas assez de clusters pour calculer les indices.")
-
-# ----------------------
-# 7. Validation croisée / stabilité
-# ----------------------
-
-# Simple validation croisée via split train-test (pour CAH et K-means)
-X_train, X_test = train_test_split(X_scaled, test_size=0.3, random_state=42)
-
-cah_train = AgglomerativeClustering(n_clusters=n_clusters, linkage='ward').fit(X_train)
-labels_train = cah_train.labels_
-
-# Affecter labels_test par prédiction kNN nearest centroid (pour stabilité)
-from sklearn.neighbors import KNeighborsClassifier
-knn = KNeighborsClassifier(n_neighbors=5)
-knn.fit(X_train, labels_train)
-labels_test_pred = knn.predict(X_test)
-
-# Clustering complet sur test pour comparaison
-cah_test = AgglomerativeClustering(n_clusters=n_clusters, linkage='ward').fit(X_test)
-labels_test = cah_test.labels_
-
-# Calcul Adjusted Rand Index entre labels test et prédits (stabilité)
-ari = adjusted_rand_score(labels_test, labels_test_pred)
-print(f"Validation croisée (ARI entre prédiction et clustering sur test) : {ari:.3f}")
-
-# ----------------------
-# 8. Statistiques descriptives par cluster (exemple CAH)
-# ----------------------
-
-df_clusters = df_num.copy()
-df_clusters['cluster'] = labels_cah
-
-print("\nStatistiques descriptives par cluster (moyenne et écart-type):")
-print(df_clusters.groupby('cluster').agg(['mean', 'std']))
-
-# ----------------------
-# 9. Analyse critique
-# ----------------------
-
-print("\n--- Analyse critique ---")
-print("• Le choix du critère de distance et de la méthode linkage (ici 'ward') impacte fortement le clustering.")
-print("• Les données ont été standardisées pour limiter l’effet d’échelle.")
-print("• Les méthodes comme DBSCAN sont plus adaptées pour détecter des clusters de forme arbitraire et résistent mieux aux outliers.")
-print("• Une réduction de dimension via ACP a été effectuée pour visualisation mais le clustering s’est fait sur les données complètes standardisées.")
-print("• Pour une meilleure robustesse, il est conseillé de tester plusieurs méthodes et indices d’évaluation.")
-print("• La validation croisée montre la stabilité relative du clustering, mais peut être améliorée par d’autres techniques.")
-print("• L’interprétation des clusters via statistiques descriptives aide à donner un sens aux groupes détectés.")
-
-print("\n✅ Toutes les figures ont été sauvegardées dans le dossier 'figures'")
-
-
-
-
-
-from sklearn.metrics import pairwise_distances
-
-# --- 1. Visualisation clusters colorés sur PCA et t-SNE ---
-
-def plot_clusters(X_proj, labels, method_name, dim_reduc_name):
-    plt.figure(figsize=(8,6))
-    palette = sns.color_palette("hsv", len(np.unique(labels)))
-    sns.scatterplot(x=X_proj[:,0], y=X_proj[:,1], hue=labels, palette=palette, legend='full', s=50)
-    plt.title(f"{method_name} clusters projetés via {dim_reduc_name}")
-    plt.xlabel(f"{dim_reduc_name} 1")
-    plt.ylabel(f"{dim_reduc_name} 2")
-    plt.legend(title='Cluster')
-    plt.grid(True)
-    plt.savefig(f"figures/{method_name}_{dim_reduc_name}_clusters.png")
-    plt.close()
-
-# Visualisation pour CAH
-plot_clusters(X_pca, labels_cah, "CAH", "PCA")
-plot_clusters(X_tsne, labels_cah, "CAH", "tSNE")
-
-# Visualisation pour K-means
-plot_clusters(X_pca, labels_kmeans, "Kmeans", "PCA")
-plot_clusters(X_tsne, labels_kmeans, "Kmeans", "tSNE")
-
-# Visualisation pour DBSCAN (si clusters valides)
-if len(set(labels_dbscan)) > 1 and -1 not in set(labels_dbscan):
-    plot_clusters(X_pca, labels_dbscan, "DBSCAN", "PCA")
-    plot_clusters(X_tsne, labels_dbscan, "DBSCAN", "tSNE")
-
-# --- 2. Calcul de l’indice de Dunn ---
+def is_valid_clustering(labels):
+    unique = set(labels)
+    if -1 in unique:
+        unique.remove(-1)
+    return len(unique) > 1
 
 def dunn_index(X, labels):
     unique_clusters = np.unique(labels)
@@ -203,17 +126,80 @@ def dunn_index(X, labels):
         for c2 in unique_clusters[i+1:]:
             dist = pairwise_distances(X[labels == c1], X[labels == c2])
             inter_dists.append(np.min(dist))  # distance minimale entre clusters
+    if max(intra_dists) == 0:
+        return np.nan
     return np.min(inter_dists) / np.max(intra_dists)
 
-print(f"Dunn index CAH : {dunn_index(X_scaled, labels_cah):.3f}")
-print(f"Dunn index K-means : {dunn_index(X_scaled, labels_kmeans):.3f}")
-if len(set(labels_dbscan)) > 1 and -1 not in set(labels_dbscan):
-    print(f"Dunn index DBSCAN : {dunn_index(X_scaled, labels_dbscan):.3f}")
-else:
-    print("DBSCAN - pas assez de clusters valides pour Dunn index.")
+def evaluate_clustering(X, labels, method_name):
+    print(f"\n--- Évaluation {method_name} ---")
+    if not is_valid_clustering(labels):
+        print("Pas assez de clusters valides pour calculer les indices.")
+        return None
+    try:
+        sil = silhouette_score(X, labels)
+    except:
+        sil = np.nan
+    try:
+        db = davies_bouldin_score(X, labels)
+    except:
+        db = np.nan
+    dunn = dunn_index(X, labels)
+    print(f"Silhouette Score: {sil:.3f}")
+    print(f"Davies-Bouldin Index (plus bas meilleur): {db:.3f}")
+    print(f"Dunn Index (plus haut meilleur): {dunn:.3f}")
+    return sil, db, dunn
 
-# --- 3. Recherche du meilleur eps pour DBSCAN (silhouette) ---
+# 7. Clustering sur données complètes standardisées
+n_clusters = 3
 
+# CAH
+labels_cah = AgglomerativeClustering(n_clusters=n_clusters, linkage='ward').fit_predict(X_scaled)
+# K-means
+labels_kmeans = KMeans(n_clusters=n_clusters, random_state=42).fit_predict(X_scaled)
+# DBSCAN
+labels_dbscan = DBSCAN(eps=0.5, min_samples=5).fit_predict(X_scaled)
+
+evaluate_clustering(X_scaled, labels_cah, "CAH sur données complètes")
+evaluate_clustering(X_scaled, labels_kmeans, "K-means sur données complètes")
+evaluate_clustering(X_scaled, labels_dbscan, "DBSCAN sur données complètes")
+
+# 8. Clustering sur PCA 2D
+labels_cah_pca2d = AgglomerativeClustering(n_clusters=n_clusters, linkage='ward').fit_predict(X_pca)
+labels_kmeans_pca2d = KMeans(n_clusters=n_clusters, random_state=42).fit_predict(X_pca)
+labels_dbscan_pca2d = DBSCAN(eps=0.5, min_samples=5).fit_predict(X_pca)
+
+evaluate_clustering(X_pca, labels_cah_pca2d, "CAH sur PCA 2D")
+evaluate_clustering(X_pca, labels_kmeans_pca2d, "K-means sur PCA 2D")
+evaluate_clustering(X_pca, labels_dbscan_pca2d, "DBSCAN sur PCA 2D")
+
+# 9. Clustering sur PCA 3D
+labels_cah_pca3d = AgglomerativeClustering(n_clusters=n_clusters, linkage='ward').fit_predict(X_pca_3d)
+labels_kmeans_pca3d = KMeans(n_clusters=n_clusters, random_state=42).fit_predict(X_pca_3d)
+labels_dbscan_pca3d = DBSCAN(eps=0.5, min_samples=5).fit_predict(X_pca_3d)
+
+evaluate_clustering(X_pca_3d, labels_cah_pca3d, "CAH sur PCA 3D")
+evaluate_clustering(X_pca_3d, labels_kmeans_pca3d, "K-means sur PCA 3D")
+evaluate_clustering(X_pca_3d, labels_dbscan_pca3d, "DBSCAN sur PCA 3D")
+
+# 10. Clustering sur t-SNE 2D
+labels_cah_tsne2d = AgglomerativeClustering(n_clusters=n_clusters, linkage='ward').fit_predict(X_tsne)
+labels_kmeans_tsne2d = KMeans(n_clusters=n_clusters, random_state=42).fit_predict(X_tsne)
+labels_dbscan_tsne2d = DBSCAN(eps=0.5, min_samples=5).fit_predict(X_tsne)
+
+evaluate_clustering(X_tsne, labels_cah_tsne2d, "CAH sur t-SNE 2D")
+evaluate_clustering(X_tsne, labels_kmeans_tsne2d, "K-means sur t-SNE 2D")
+evaluate_clustering(X_tsne, labels_dbscan_tsne2d, "DBSCAN sur t-SNE 2D")
+
+# 11. Clustering sur t-SNE 3D
+labels_cah_tsne3d = AgglomerativeClustering(n_clusters=n_clusters, linkage='ward').fit_predict(X_tsne_3d)
+labels_kmeans_tsne3d = KMeans(n_clusters=n_clusters, random_state=42).fit_predict(X_tsne_3d)
+labels_dbscan_tsne3d = DBSCAN(eps=0.5, min_samples=5).fit_predict(X_tsne_3d)
+
+evaluate_clustering(X_tsne_3d, labels_cah_tsne3d, "CAH sur t-SNE 3D")
+evaluate_clustering(X_tsne_3d, labels_kmeans_tsne3d, "K-means sur t-SNE 3D")
+evaluate_clustering(X_tsne_3d, labels_dbscan_tsne3d, "DBSCAN sur t-SNE 3D")
+
+# --- Recherche du meilleur eps pour DBSCAN sur données complètes ---
 eps_values = np.linspace(0.1, 1.5, 15)
 best_eps = None
 best_score = -1
@@ -222,9 +208,7 @@ best_labels = None
 for eps in eps_values:
     db = DBSCAN(eps=eps, min_samples=5)
     labels_tmp = db.fit_predict(X_scaled)
-    # Silhouette possible seulement si au moins 2 clusters sans outliers (-1)
-    n_clusters_tmp = len(set(labels_tmp)) - (1 if -1 in labels_tmp else 0)
-    if n_clusters_tmp > 1:
+    if is_valid_clustering(labels_tmp):
         try:
             score = silhouette_score(X_scaled, labels_tmp)
             if score > best_score:
@@ -232,12 +216,49 @@ for eps in eps_values:
                 best_eps = eps
                 best_labels = labels_tmp
         except:
-            pass
+            continue
 
 if best_eps is not None:
-    print(f"Meilleur eps DBSCAN : {best_eps:.2f} avec silhouette score : {best_score:.3f}")
-    # Visualiser les clusters DBSCAN optimaux
-    plot_clusters(X_pca, best_labels, "DBSCAN_Optim", "PCA")
-    plot_clusters(X_tsne, best_labels, "DBSCAN_Optim", "tSNE")
+    print(f"\nMeilleur eps DBSCAN : {best_eps:.2f} avec silhouette score : {best_score:.3f}")
+    evaluate_clustering(X_scaled, best_labels, "DBSCAN Optimisé")
 else:
-    print("DBSCAN - Aucun clustering valide trouvé sur la plage eps testée.")
+    print("\nDBSCAN - Aucun clustering valide trouvé sur la plage eps testée.")
+
+# --- Visualisation clusters ---
+
+def plot_clusters(X_proj, labels, method_name, dim_reduc_name):
+    plt.figure(figsize=(8,6))
+    unique_labels = np.unique(labels)
+    n_clusters_plot = len(unique_labels) - (1 if -1 in labels else 0)
+    if n_clusters_plot < 1:
+        print(f"{method_name} - Pas assez de clusters valides pour visualisation.")
+        return
+    palette = sns.color_palette("hsv", n_clusters_plot)
+    colors = []
+    for lbl in labels:
+        if lbl == -1:
+            colors.append('lightgrey')
+        else:
+            colors.append(palette[lbl % n_clusters_plot])
+    plt.scatter(X_proj[:,0], X_proj[:,1], c=colors, s=50, alpha=0.7)
+    plt.title(f"{method_name} - Clusters sur {dim_reduc_name}")
+    plt.xlabel(f"{dim_reduc_name} 1")
+    plt.ylabel(f"{dim_reduc_name} 2")
+    plt.grid(True)
+    plt.savefig(f"figures/Clusters_{method_name.replace(' ', '_')}_{dim_reduc_name}.png")
+    plt.close()
+
+# Visualisation clusters sur PCA 2D
+plot_clusters(X_pca, labels_cah_pca2d, "CAH", "PCA_2D")
+plot_clusters(X_pca, labels_kmeans_pca2d, "K-means", "PCA_2D")
+plot_clusters(X_pca, labels_dbscan_pca2d, "DBSCAN", "PCA_2D")
+
+# Visualisation clusters sur t-SNE 2D
+plot_clusters(X_tsne, labels_cah_tsne2d, "CAH", "tSNE_2D")
+plot_clusters(X_tsne, labels_kmeans_tsne2d, "K-means", "tSNE_2D")
+plot_clusters(X_tsne, labels_dbscan_tsne2d, "DBSCAN", "tSNE_2D")
+
+# Visualisation clusters sur données complètes (sur PCA 2D pour visibilité)
+plot_clusters(X_pca, labels_cah, "CAH", "Données_Complètes")
+plot_clusters(X_pca, labels_kmeans, "K-means", "Données_Complètes")
+plot_clusters(X_pca, labels_dbscan, "DBSCAN", "Données_Complètes")
