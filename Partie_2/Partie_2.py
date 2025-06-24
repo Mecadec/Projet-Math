@@ -17,29 +17,10 @@ data = df.iloc[:, 1:]
 graph_dir = os.path.join(os.path.dirname(__file__), "graph")
 os.makedirs(graph_dir, exist_ok=True)
 
-# Régression linéaire multiple par colonne
+ # Pour chaque colonne cible, effectuer une régression linéaire simple avec chaque autre colonne comme prédicteur
 for target_col in data.columns:
     X = data.drop(columns=[target_col])
     y = data[target_col]
-    reg = LinearRegression()
-    reg.fit(X, y)
-    y_pred = reg.predict(X)
-    r2 = r2_score(y, y_pred)
-    if r2 > 0.80:
-        print(f"R² pour {target_col}: {r2:.4f}")
-        # Visualisation des résultats
-        plt.figure(figsize=(10, 6))
-        plt.scatter(y, y_pred, alpha=0.5, label="Nuage de points (réel vs prédit)")
-        plt.plot([y.min(), y.max()], [y.min(), y.max()], 'r--', lw=2, label="Droite idéale y = ŷ")
-        plt.title(f"Régression linéaire pour {target_col}")
-        plt.xlabel("Valeurs réelles")
-        plt.ylabel("Valeurs prédites")
-        plt.text(0.05, 0.95, f"R² = {r2:.3f}", transform=plt.gca().transAxes, fontsize=12, verticalalignment='top')
-        plt.legend()
-        # Sauvegarde du graphique
-        plt.savefig(os.path.join(graph_dir, f"regression_multiple_{target_col}.png"), bbox_inches='tight')
-        plt.close()
-    # Pour chaque variable explicative, afficher la droite de régression simple
     for feature_col in X.columns:
         x_feat = X[feature_col].values.reshape(-1, 1)
         reg_simple = LinearRegression()
@@ -60,7 +41,7 @@ for target_col in data.columns:
             # Sauvegarde du graphique
             plt.savefig(os.path.join(graph_dir, f"regression_{target_col}_vs_{feature_col}.png"), bbox_inches='tight')
             plt.close()
-#        plt.show()
+#           plt.show()
 
 # Exemple avec les points M1(1,1), M2(1,2), M3(1,5), M4(3,4), M5(4,3), M6(6,2), M7(0,4)
 points = np.array([
