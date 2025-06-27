@@ -127,9 +127,9 @@ import openpyxl
 from sklearn.decomposition import PCA
 
 # --- Chargement -------------------------------------------------
-# Chemin robuste : dossier du script → parent → fichier
+# Chemin robuste : dossier du script → parent → data → fichier
 root = Path(__file__).resolve().parent
-file = root / "Data_PE_2025-CSI3_CIR3.xlsx"
+file = root.parent / "data" / "Data_PE_2025-CSI3_CIR3.xlsx"
 
 df = pd.read_excel(file, index_col=0)  
 df = df.dropna(how="all")    

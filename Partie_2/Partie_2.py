@@ -5,8 +5,11 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 import os
 
+import os
+
 # Charger les données
-fichier = "Partie_2\Data_PE_2025-CSI3_CIR3.xlsx"
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+fichier = os.path.join(base_dir, 'data', 'Data_PE_2025-CSI3_CIR3.xlsx')
 df = pd.read_excel(fichier)
 df = df.dropna()  # Supprime les lignes avec des valeurs manquantes
 

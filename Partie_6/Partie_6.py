@@ -14,8 +14,11 @@ from sklearn.metrics import silhouette_score, davies_bouldin_score, adjusted_ran
 from sklearn.model_selection import train_test_split
 from mpl_toolkits.mplot3d import Axes3D
 
+import os
+
 # 1. Charger les données
-df = pd.read_excel("Data_PE_2025-CSI3_CIR3.xlsx")
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+df = pd.read_excel(os.path.join(base_dir, 'data', 'Data_PE_2025-CSI3_CIR3.xlsx'))
 df = df.dropna(how='all')
 print(df.head())
 
@@ -26,8 +29,9 @@ df_num = df.select_dtypes(include=[np.number])
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(df_num)
 
-# Création d’un dossier pour sauvegarder les figures
-os.makedirs("figures", exist_ok=True)
+# Création d'un dossier pour sauvegarder les figures dans le même répertoire
+figures_dir = os.path.join(os.path.dirname(__file__), "figures")
+os.makedirs(figures_dir, exist_ok=True)
 
 # 3. ACP (PCA) - réduction en 2D et 3D
 pca_2d = PCA(n_components=2)
@@ -42,7 +46,7 @@ plt.title("Projection ACP (PCA) - 2 composantes principales")
 plt.xlabel("PC 1")
 plt.ylabel("PC 2")
 plt.grid(True)
-plt.savefig("figures/Projection_PCA.png")
+plt.savefig(os.path.join(figures_dir, "Projection_PCA.png"))
 plt.close()
 
 explained_variance_ratio = pca_2d.explained_variance_ratio_
@@ -65,7 +69,7 @@ plt.figure(figsize=(8, 6))
 plt.scatter(X_tsne[:, 0], X_tsne[:, 1], c='green', s=50, alpha=0.7)
 plt.title("Projection t-SNE (2D)")
 plt.grid(True)
-plt.savefig("figures/Projection_tSNE.png")
+plt.savefig(os.path.join(figures_dir, "Projection_tSNE.png"))
 plt.close()
 
 tsne_3d = TSNE(n_components=3, perplexity=10, max_iter=1000, random_state=42)
@@ -78,7 +82,7 @@ ax.set_title("Projection t-SNE - 3D")
 ax.set_xlabel("t-SNE 1")
 ax.set_ylabel("t-SNE 2")
 ax.set_zlabel("t-SNE 3")
-plt.savefig("figures/Projection_tSNE_3D.png")
+plt.savefig(os.path.join(figures_dir, "Projection_tSNE_3D.png"))
 plt.close()
 
 # 5. Heatmap des distances
@@ -87,7 +91,7 @@ distance_matrix = squareform(pdist(X_scaled, metric='euclidean'))
 plt.figure(figsize=(10, 8))
 sns.heatmap(distance_matrix, cmap="viridis")
 plt.title("Heatmap des distances entre observations")
-plt.savefig("figures/Heatmap_Distances.png")
+plt.savefig(os.path.join(figures_dir, "Heatmap_Distances.png"))
 plt.close()
 
 # 6. 3D PCA (visualisation)
@@ -98,7 +102,7 @@ ax.set_title("Projection ACP (PCA) - 3D")
 ax.set_xlabel("PC 1")
 ax.set_ylabel("PC 2")
 ax.set_zlabel("PC 3")
-plt.savefig("figures/Projection_PCA_3D.png")
+plt.savefig(os.path.join(figures_dir, "Projection_PCA_3D.png"))
 plt.close()
 
 # --- Fonctions clustering et évaluation ---
@@ -245,7 +249,7 @@ def plot_clusters(X_proj, labels, method_name, dim_reduc_name):
     plt.xlabel(f"{dim_reduc_name} 1")
     plt.ylabel(f"{dim_reduc_name} 2")
     plt.grid(True)
-    plt.savefig(f"figures/Clusters_{method_name.replace(' ', '_')}_{dim_reduc_name}.png")
+    plt.savefig(os.path.join(figures_dir, f"Clusters_{method_name.replace(' ', '_')}_{dim_reduc_name}.png"))
     plt.close()
 
 # Visualisation clusters sur PCA 2D

@@ -2,9 +2,11 @@ import numpy as np
 import scipy.stats as stats
 import statsmodels.api as sm
 import pandas as pd
+import os
 
 # Charger les données depuis le fichier Excel
-fichier = "Partie_4/Data_PE_2025-CSI3_CIR3.xlsx"
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+fichier = os.path.join(base_dir, 'data', 'Data_PE_2025-CSI3_CIR3.xlsx')
 df = pd.read_excel(fichier).dropna()  # Suppression des lignes avec NaN
 df = df.iloc[:, 1:]  # Ignorer la première colonne (noms ou indices)
 

@@ -3,9 +3,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import itertools
+import os
+
+# Créer le dossier Graph dans le même répertoire s'il n'existe pas
+graph_dir = os.path.join(os.path.dirname(__file__), "Graph")
+os.makedirs(graph_dir, exist_ok=True)
 
 # Charger les données
-a = pd.read_excel("Data_PE_2025-CSI3_CIR3.xlsx")
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+a = pd.read_excel(os.path.join(base_dir, 'data', 'Data_PE_2025-CSI3_CIR3.xlsx'))
 df = a.dropna(how='all')
 
 # Nettoyer noms colonnes
@@ -86,13 +92,17 @@ for i, j in combinaisons:
     plt.grid(True)
     
     # Enregistrer le graphique
-    plt.savefig(f"Graph/Regression_{i}_vers_{j}.png")
+    output_path = os.path.join(graph_dir, f"Regression_{i}_vers_{j}.png")
+    plt.savefig(output_path)
     plt.close()
 
 # Convertir les résultats en DataFrame
 df_resultats = pd.DataFrame(resultats)
 
-# Sauvegarder dans un fichier CSV
-df_resultats.to_csv("resultats_regression.csv", index=False)
+# Définir le chemin de sortie pour le fichier CSV
+output_csv = os.path.join(os.path.dirname(__file__), "resultats_regression.csv")
 
-print("Analyse terminée. Résultats sauvegardés dans 'resultats_regression.csv'.")
+# Sauvegarder dans un fichier CSV
+df_resultats.to_csv(output_csv, index=False)
+
+print(f"Analyse terminée. Résultats sauvegardés dans '{output_csv}'")
