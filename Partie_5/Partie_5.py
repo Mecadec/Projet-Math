@@ -128,10 +128,11 @@ from sklearn.decomposition import PCA
 
 # --- Chargement -------------------------------------------------
 # Chemin robuste : dossier du script → parent → fichier
-root = Path(__file__).resolve().parent.parent
+root = Path(__file__).resolve().parent
 file = root / "Data_PE_2025-CSI3_CIR3.xlsx"
 
-df = pd.read_excel(file, index_col=0)   # ← fonction adaptée à .xlsx
+df = pd.read_excel(file, index_col=0)  
+df = df.dropna(how="all")    
 print(df.head())        # contrôle visuel
 X = StandardScaler().fit_transform(df.values)
 
@@ -156,7 +157,7 @@ d = sp.distance.pdist(X_std, metric="euclidean")
 print("NaN ?", np.isnan(d).any(), "| Inf ?", np.isinf(d).any())
 
 # 1) Choix du nombre de classes (ou coupe à hauteur h)
-k = 6
+k = 3
 labels = fcluster(Z, k, criterion="maxclust")   # étiquettes CAH
 df["cluster"] = labels                         # stocke dans le DataFrame
 

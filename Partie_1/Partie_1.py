@@ -16,7 +16,6 @@ def descriptive(arr):
     median = statistics.median(arr)
     variance_pop = sum((v - mean) ** 2 for v in arr) / n
     stdev_pop = math.sqrt(variance_pop)
-    # unbiased (sample) estimators
     variance_sample = variance_pop * n / (n - 1)
     stdev_sample = math.sqrt(variance_sample)
     minimum = min(arr)
